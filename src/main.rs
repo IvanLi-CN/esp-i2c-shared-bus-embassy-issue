@@ -15,7 +15,7 @@ use esp_hal::{
     peripherals::{Peripherals, I2C0},
     prelude::*,
     system::SystemControl,
-    timer::timg::TimerGroup,
+    timer::{timg::TimerGroup, OneShotTimer},
     Async,
 };
 use static_cell::make_static;
@@ -30,8 +30,11 @@ async fn main(spawner: Spawner) {
     let system = SystemControl::new(peripherals.SYSTEM);
     let clocks = ClockControl::max(system.clock_control).freeze();
 
-    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
-    esp_hal_embassy::init(&clocks, timg0);
+    let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks, None);
+    let timer0 = OneShotTimer::new(timg0.timer0.into());
+    let timers = [timer0];
+    let timers = make_static!(timers);
+    esp_hal_embassy::init(&clocks, timers);
 
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
