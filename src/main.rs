@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(type_alias_impl_trait)]
+#![feature(impl_trait_in_assoc_type)]
 
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 use embassy_executor::Spawner;
@@ -15,12 +16,12 @@ use esp_hal::{
     peripherals::{Peripherals, I2C0},
     prelude::*,
     system::SystemControl,
-    timer::{timg::TimerGroup, OneShotTimer},
+    timer::systimer::{SystemTimer, Target},
     Async,
 };
 use static_cell::make_static;
 
-#[main]
+#[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     esp_println::logger::init_logger_from_env();
 
@@ -30,11 +31,8 @@ async fn main(spawner: Spawner) {
     let system = SystemControl::new(peripherals.SYSTEM);
     let clocks = ClockControl::max(system.clock_control).freeze();
 
-    let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks, None);
-    let timer0 = OneShotTimer::new(timg0.timer0.into());
-    let timers = [timer0];
-    let timers = make_static!(timers);
-    esp_hal_embassy::init(&clocks, timers);
+    let systimer = SystemTimer::new(peripherals.SYSTIMER).split::<Target>();
+    esp_hal_embassy::init(&clocks, systimer.alarm0);
 
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
